@@ -263,23 +263,6 @@ npm run compile
 ```
 Launch debug host (F5). Package with: `npx vsce package`.
 
-### Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
-## Release Notes
-
-### 0.0.1
-- Initial foundation: Semgrep scanning, diagnostics, quick fixes
-- Gemini integration for explanations + prompt enhancement
-- Guardrailed prompt-only enhancement (no code generation)
-- AI + fallback security report generation
-- Metrics collection for scans & fixes
-
 ---
 
 **Stay Secure!** 🔐  
