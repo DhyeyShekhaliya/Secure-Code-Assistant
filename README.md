@@ -1,6 +1,6 @@
 # 🔐 Secure Code Assistant
 
-An opinionated VS Code extension providing real‑time static security scanning (Semgrep) plus AI‑assisted (Gemini) explanations, reporting, and security‑aware prompt enhancement (prompt only – no code generation). Built for fast feedback, minimal noise, and secure-by-default developer workflows.
+An opinionated VS Code extension providing real‑time static security scanning (Semgrep) plus AI‑assisted (Gemini) explanations, reporting, and security‑aware prompt enhancement. Built for fast feedback, minimal noise, and secure-by-default developer workflows.
 
 ## Features
 
