@@ -26,7 +26,7 @@ An opinionated VS Code extension providing real‑time static security scanning 
 - Metrics captured for applied fixes (success/failure)
 - Triggers re-scan to validate remediation
 
-### 📝 Security Prompt Enhancement (Prompt‑Only Mode)
+### 📝 Security Prompt Enhancement
 - Enhances your natural language prompt with targeted security requirements
 - Strictly returns a single enhanced prompt 
 - Guardrails strip accidental code fences / code tokens
