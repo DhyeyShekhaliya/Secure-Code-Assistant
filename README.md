@@ -136,11 +136,29 @@ The extension implements multiple caching layers for optimal performance:
 - **Metrics Persistence**: Caches scan/fix statistics in VS Code's global state for historical tracking and reporting
 - **Diagnostic Synchronization**: Efficiently updates only changed diagnostics rather than full re-rendering
 
+#### **Historical Data Tracking**
+The extension maintains comprehensive historical records:
+
+- **Scan History**: Records every security scan with timestamp, file path, issues found, scan duration, and trigger type (manual/auto-save)
+- **Fix History**: Tracks all applied fixes including rule ID, fix type (quick-fix/manual), success rate, and remediation details  
+- **Session Metrics**: Captures per-session statistics including files scanned, common vulnerabilities, and security trends
+- **Long-term Analytics**: Aggregates all-time statistics like total scans, average issues per scan, fix success rates, and most vulnerable files
+- **Trend Analysis**: Identifies security posture trends (improving/declining/stable) based on historical patterns
+
+**Historical Data Structure**:
+```
+📁 ~/.vscode/extensions/secure-code-assistant/
+├── metrics.json (persistent scan/fix history)
+├── session-cache/ (current session data)
+└── explanations-cache/ (AI response cache)
+```
+
 **Cache Benefits**:
 - Reduces AI API costs by ~70-80% through explanation reuse
 - Improves hover response time from ~2s to ~50ms for cached explanations
-- Maintains scan history across VS Code restarts
-- Enables offline explanation fallbacks when network unavailable
+- Maintains complete audit trail across VS Code restarts
+- Enables security trend analysis and compliance reporting
+- Provides offline explanation fallbacks when network unavailable
 
 ### ○ What Security Issues Are Supported
 
