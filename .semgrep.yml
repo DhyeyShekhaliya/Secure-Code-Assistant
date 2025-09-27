@@ -1,0 +1,229 @@
+rules:
+  - id: hardcoded-secret
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $VAR = "sk-$X"
+          - pattern: |
+              $VAR = "pk_$X"
+          - pattern: |
+              $VAR = "Bearer $X"
+          - pattern: |
+              const $VAR = "$SECRET"
+          - pattern: |
+              let $VAR = "$SECRET"
+          - pattern: |
+              var $VAR = "$SECRET"
+      - metavariable-regex:
+          metavariable: $SECRET
+          regex: .{20,}
+    message: "Hardcoded secret detected. Use environment variables instead."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      
+  - id: sql-injection
+    patterns:
+      - pattern-either:
+          - pattern: |
+              const query = "SELECT * FROM users WHERE id = " + $VAR
+          - pattern: |
+              let query = "SELECT * FROM users WHERE id = " + $VAR
+          - pattern: |
+              var query = "SELECT * FROM users WHERE id = " + $VAR
+          - pattern: |
+              $QUERY = "SELECT * FROM $TABLE WHERE $COLUMN = " + $VAR
+          - pattern: |
+              const $VAR = "SELECT * FROM $TABLE WHERE $COLUMN = " + $PARAM
+          - pattern: |
+              let $VAR = "SELECT * FROM $TABLE WHERE $COLUMN = " + $PARAM
+          - pattern: |
+              var $VAR = "SELECT * FROM $TABLE WHERE $COLUMN = " + $PARAM
+          - pattern: |
+              $QUERY = "INSERT INTO $TABLE VALUES (" + $VAR + ")"
+          - pattern: |
+              $QUERY = "UPDATE $TABLE SET $COLUMN = " + $VAR
+          - pattern: |
+              $QUERY = "DELETE FROM $TABLE WHERE $COLUMN = " + $VAR
+          - pattern: |
+              $QUERY = `SELECT * FROM $TABLE WHERE $COLUMN = ${$VAR}`
+          - pattern: |
+              $DB.query("SELECT * FROM $TABLE WHERE $COLUMN = " + $VAR)
+    message: "SQL injection vulnerability. Use parameterized queries instead."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"
+
+  - id: insecure-random
+    patterns:
+      - pattern-either:
+          - pattern: Math.random()
+          - pattern: Math.random().toString($X)
+    message: "Cryptographically insecure random number generation. Use crypto.randomBytes() instead."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator"
+
+  - id: xss-innerHTML
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $EL.innerHTML = $VAR
+          - pattern: |
+              $EL.outerHTML = $VAR
+          - pattern: |
+              document.write($VAR)
+    message: "XSS vulnerability. Sanitize user input or use textContent instead."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-79: Cross-site Scripting"
+
+  - id: missing-authorization
+    patterns:
+      - pattern-either:
+          - pattern: |
+              app.get("/$ROUTE", function($REQ, $RES) { ... })
+          - pattern: |
+              app.post("/$ROUTE", function($REQ, $RES) { ... })
+          - pattern: |
+              app.put("/$ROUTE", function($REQ, $RES) { ... })
+          - pattern: |
+              app.delete("/$ROUTE", function($REQ, $RES) { ... })
+          - pattern: |
+              router.get("/$ROUTE", function($REQ, $RES) { ... })
+          - pattern: |
+              router.post("/$ROUTE", function($REQ, $RES) { ... })
+          - pattern: |
+              router.put("/$ROUTE", function($REQ, $RES) { ... })
+          - pattern: |
+              router.delete("/$ROUTE", function($REQ, $RES) { ... })
+          - pattern: |
+              function deleteUser($PARAMS) { ... }
+          - pattern: |
+              function adminAction($PARAMS) { ... }
+          - pattern: |
+              function updateUser($PARAMS) { ... }
+          - pattern: |
+              function createUser($PARAMS) { ... }
+      - pattern-not-inside: |
+          if ($AUTH) { ... }
+      - pattern-not-inside: |
+          if ($REQ.user) { ... }
+      - pattern-not-inside: |
+          if ($REQ.isAuthenticated()) { ... }
+      - pattern-not-inside: |
+          auth.requireAuth($X)
+    message: "Missing authorization check. Ensure proper authentication/authorization before sensitive operations."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-862: Missing Authorization"
+
+  - id: vulnerable-express
+    patterns:
+      - pattern: |
+          "express": "$VERSION"
+      - metavariable-regex:
+          metavariable: $VERSION
+          regex: ^"4\.1[0-7]\..*"$
+    message: "Vulnerable Express.js version detected. Update to 4.18.0 or later."
+    languages: [json]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-1104: Use of Unmaintained Third Party Components"
+
+  - id: vulnerable-lodash
+    patterns:
+      - pattern: |
+          "lodash": "$VERSION"
+      - metavariable-regex:
+          metavariable: $VERSION
+          regex: ^"4\.17\.1[0-5]"$
+    message: "Vulnerable Lodash version detected. Update to 4.17.16 or later."
+    languages: [json]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-1104: Use of Unmaintained Third Party Components"
+
+  - id: deprecated-moment
+    patterns:
+      - pattern: |
+          "moment": "$VERSION"
+    message: "Moment.js is deprecated. Consider migrating to Day.js, date-fns, or Luxon."
+    languages: [json]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-1104: Use of Unmaintained Third Party Components"
+
+  - id: deprecated-request
+    patterns:
+      - pattern: |
+          "request": "$VERSION"
+    message: "Request library is deprecated. Use axios, node-fetch, or built-in fetch instead."
+    languages: [json]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-1104: Use of Unmaintained Third Party Components"
+
+  - id: additional-hardcoded-secrets
+    patterns:
+      - pattern-either:
+          # Database passwords
+          - pattern: |
+              password: "$PASSWORD"
+          - pattern: |
+              pwd: "$PASSWORD"
+          - pattern: |
+              pass: "$PASSWORD"
+          # JWT secrets
+          - pattern: |
+              jwt_secret: "$SECRET"
+          - pattern: |
+              jwtSecret: "$SECRET"
+          - pattern: |
+              JWT_SECRET: "$SECRET"
+          # Database connection strings
+          - pattern: |
+              mongodb://$USER:$PASS@$HOST
+          - pattern: |
+              mysql://$USER:$PASS@$HOST
+          - pattern: |
+              postgres://$USER:$PASS@$HOST
+          # AWS credentials
+          - pattern: |
+              aws_access_key_id: "$KEY"
+          - pattern: |
+              aws_secret_access_key: "$SECRET"
+          # Private keys
+          - pattern: |
+              "-----BEGIN PRIVATE KEY-----"
+          - pattern: |
+              "-----BEGIN RSA PRIVATE KEY-----"
+      - metavariable-regex:
+          metavariable: $PASSWORD
+          regex: .{6,}
+      - metavariable-regex:
+          metavariable: $SECRET
+          regex: .{16,}
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: .{16,}
+    message: "Additional hardcoded credentials detected. Use environment variables or secure credential storage."
+    languages: [javascript, typescript, json, yaml]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"
