@@ -20,12 +20,12 @@ export class GeminiService {
   }
 
   private initializeModel() {
-    console.log('🔑 GeminiService: Initializing model...');
+    console.log('GeminiService: Initializing model...');
     
     const config = vscode.workspace.getConfiguration('secureAssistant');
     let apiKey = config.get<string>('geminiApiKey');
     
-    console.log('🔑 GeminiService: Workspace config API key:', apiKey ? `${apiKey.substring(0, 8)}...` : 'Not found');
+    console.log('GeminiService: Workspace config API key:', apiKey ? `${apiKey.substring(0, 8)}...` : 'Not found');
     
     // If not in settings, try multiple environment variable sources
     if (!apiKey) {
@@ -39,9 +39,9 @@ export class GeminiService {
       
       for (const envVar of envVars) {
         apiKey = process.env[envVar];
-        console.log(`🔑 GeminiService: Checking ${envVar}:`, apiKey ? `${apiKey.substring(0, 8)}...` : 'Not found');
+        console.log(`GeminiService: Checking ${envVar}:`, apiKey ? `${apiKey.substring(0, 8)}...` : 'Not found');
         if (apiKey) {
-          console.log(`✅ GeminiService: Found API key in ${envVar}`);
+          console.log(`GeminiService: Found API key in ${envVar}`);
           break;
         }
       }
@@ -56,7 +56,7 @@ export class GeminiService {
         
         if (workspaceRoot) {
           const envPath = path.join(workspaceRoot, '.env');
-          console.log(`🔑 GeminiService: Checking .env file at: ${envPath}`);
+          console.log(` GeminiService: Checking .env file at: ${envPath}`);
           
           if (fs.existsSync(envPath)) {
             const envContent = fs.readFileSync(envPath, 'utf8');
@@ -66,27 +66,27 @@ export class GeminiService {
               const trimmed = line.trim();
               if (trimmed.startsWith('GOOGLE_GENERATIVE_AI_API_KEY=')) {
                 apiKey = trimmed.split('=')[1].replace(/["']/g, '');
-                console.log('✅ GeminiService: Found API key in .env file');
+                console.log('  GeminiService: Found API key in .env file');
                 break;
               }
               if (trimmed.startsWith('GEMINI_API_KEY=')) {
                 apiKey = trimmed.split('=')[1].replace(/["']/g, '');
-                console.log('✅ GeminiService: Found API key in .env file (GEMINI_API_KEY)');
+                console.log('  GeminiService: Found API key in .env file (GEMINI_API_KEY)');
                 break;
               }
             }
           } else {
-            console.log('🔑 GeminiService: No .env file found');
+            console.log(' GeminiService: No .env file found');
           }
         }
       } catch (error) {
-        console.warn('🔑 GeminiService: Failed to read .env file:', error);
+        console.warn(' GeminiService: Failed to read .env file:', error);
       }
     }
     
     if (!apiKey) {
-      console.warn('🔑 Gemini API key not configured.');
-      console.log('📝 To enable AI features, try one of these methods:');
+      console.warn(' Gemini API key not configured.');
+      console.log('    To enable AI features, try one of these methods:');
       console.log('   1. Run command: "Configure Gemini API Key" (easiest)');
       console.log('   2. Add to workspace settings.json: "secureAssistant.geminiApiKey": "your-key"');
       console.log('   3. Create .env file with: GOOGLE_GENERATIVE_AI_API_KEY=your-key');
@@ -97,7 +97,7 @@ export class GeminiService {
       if (!this.hasShownApiKeyPrompt) {
         this.hasShownApiKeyPrompt = true;
         vscode.window.showInformationMessage(
-          '🤖 AI features disabled. Configure Gemini API key to enable enhanced prompts.',
+          '    AI features disabled. Configure Gemini API key to enable enhanced prompts.',
           'Get API Key',
           'Configure Now',
           'Create .env'
@@ -148,7 +148,7 @@ GOOGLE_GENERATIVE_AI_API_KEY=your-api-key-here
       if (!fs.existsSync(envPath)) {
         fs.writeFileSync(envPath, envContent);
         vscode.window.showInformationMessage(
-          '✅ Created .env file! Please edit it with your API key.',
+          '  Created .env file! Please edit it with your API key.',
           'Open .env File'
         ).then(selection => {
           if (selection === 'Open .env File') {
@@ -175,15 +175,15 @@ GOOGLE_GENERATIVE_AI_API_KEY=your-api-key-here
   }
 
   public async generateResponse(prompt: string): Promise<string | null> {
-    console.log('🤖 GeminiService: Generating AI response...');
+    console.log('    GeminiService: Generating AI response...');
     
     if (!this.model) {
-      console.warn('🤖 GeminiService: Model not available for generateResponse');
+      console.warn('    GeminiService: Model not available for generateResponse');
       return null;
     }
 
     try {
-      console.log(`🤖 GeminiService: Sending prompt to AI model (${prompt.length} chars)...`);
+      console.log(`    GeminiService: Sending prompt to AI model (${prompt.length} chars)...`);
       
       const { text } = await generateText({
         model: this.model,
@@ -192,32 +192,32 @@ GOOGLE_GENERATIVE_AI_API_KEY=your-api-key-here
         temperature: 0.3
       });
 
-      console.log(`🤖 GeminiService: Received AI response (${text.length} chars)`);
+      console.log(`    GeminiService: Received AI response (${text.length} chars)`);
       
       if (!text || text.trim().length === 0) {
-        console.warn('🤖 GeminiService: Empty response from AI model');
+        console.warn('    GeminiService: Empty response from AI model');
         return null;
       }
       
       return text.trim();
     } catch (error) {
-      console.error('❌ GeminiService: Failed to generate AI response:', error);
+      console.error('    GeminiService: Failed to generate AI response:', error);
       throw error;
     }
   }
 
   public async explainIssue(issue: Issue): Promise<GeminiExplanation | null> {
-    console.log(`🤖 GeminiService: Explaining issue ${issue.ruleId}...`);
+    console.log(`    GeminiService: Explaining issue ${issue.ruleId}...`);
     
     if (!this.model) {
-      console.warn('🤖 GeminiService: Model not available for explainIssue');
+      console.warn('    GeminiService: Model not available for explainIssue');
       return null;
     }
 
     // Check cache first
     const cacheKey = `${issue.ruleId}-${issue.message}`;
     if (this.explanationCache.has(cacheKey)) {
-      console.log(`📚 GeminiService: Using cached explanation for ${issue.ruleId}`);
+      console.log(`    GeminiService: Using cached explanation for ${issue.ruleId}`);
       return this.explanationCache.get(cacheKey)!;
     }
 
@@ -240,7 +240,7 @@ Return ONLY JSON matching exactly:
   "cwe": "CWE-ID or omit if unknown"
 }`;
 
-      console.log(`🤖 GeminiService: Sending explanation request for ${issue.ruleId}...`);
+      console.log(`    GeminiService: Sending explanation request for ${issue.ruleId}...`);
       const { text } = await generateText({
         model: this.model,
         system: "You are a security expert. Output ONLY raw minified JSON object. No backticks, no preamble.",
@@ -248,7 +248,7 @@ Return ONLY JSON matching exactly:
         temperature: 0.05
       });
 
-      console.log(`🤖 GeminiService: Received explanation response (${text.length} chars)`);
+      console.log(`    GeminiService: Received explanation response (${text.length} chars)`);
       let raw = text.trim();
 
       // Strip accidental code fences or surrounding text
@@ -266,18 +266,18 @@ Return ONLY JSON matching exactly:
       try {
         parsed = JSON.parse(raw);
       } catch (jsonErr) {
-        console.warn('⚠️ GeminiService: Primary JSON.parse failed, attempting lenient cleanup');
+        console.warn('   GeminiService: Primary JSON.parse failed, attempting lenient cleanup');
         // Attempt minor repairs (remove trailing commas)
         const repaired = raw.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
         try {
           parsed = JSON.parse(repaired);
         } catch (jsonErr2) {
-          console.error('❌ GeminiService: JSON parsing failed after repair attempts');
+          console.error('    GeminiService: JSON parsing failed after repair attempts');
         }
       }
 
       if (!parsed) {
-        console.warn(`⚠️ GeminiService: Falling back to heuristic explanation for ${issue.ruleId}`);
+        console.warn(`   GeminiService: Falling back to heuristic explanation for ${issue.ruleId}`);
         const fallback: GeminiExplanation = {
           severity: (['High','Medium','Low'].includes(issue.severity as any) ? issue.severity : 'Medium') as any,
           explanation: this.buildHeuristicExplanation(issue),
@@ -312,10 +312,10 @@ Return ONLY JSON matching exactly:
       }
 
       this.explanationCache.set(cacheKey, parsed);
-      console.log(`✅ GeminiService: Successfully explained ${issue.ruleId}`);
+      console.log(`  GeminiService: Successfully explained ${issue.ruleId}`);
       return parsed;
     } catch (error) {
-      console.error(`❌ GeminiService: Failed to explain ${issue.ruleId}:`, error);
+      console.error(`    GeminiService: Failed to explain ${issue.ruleId}:`, error);
       const fallback: GeminiExplanation = {
         severity: (['High','Medium','Low'].includes(issue.severity as any) ? issue.severity : 'Medium') as any,
         explanation: this.buildHeuristicExplanation(issue),
@@ -363,11 +363,11 @@ Return ONLY JSON matching exactly:
   }
 
   public async enhancePrompt(userPrompt: string): Promise<string> {
-    console.log('🤖 GeminiService: enhancePrompt called with:', userPrompt);
-    console.log('🤖 GeminiService: Model available:', !!this.model);
+    console.log('    GeminiService: enhancePrompt called with:', userPrompt);
+    console.log('    GeminiService: Model available:', !!this.model);
     
     if (!this.model) {
-      console.warn('❌ GeminiService: Model not available for enhancePrompt');
+      console.warn('    GeminiService: Model not available for enhancePrompt');
       throw new Error('Gemini AI model not initialized. Configure an API key to enable enhanced prompts.');
     }
 
@@ -391,18 +391,18 @@ SECURITY AREAS (include only if relevant): input validation, authN/authZ (RBAC/J
 
 OUTPUT: Enhanced prompt only.`;
 
-      console.log('🚀 GeminiService: Sending enhancePrompt request to AI model...');
+      console.log('   GeminiService: Sending enhancePrompt request to AI model...');
       const { text } = await generateText({
         model: this.model,
         system: "You enhance developer prompts with precise security requirements. You NEVER output code or explanations—only the single enhanced prompt.",
         prompt,
         temperature: 0.15
       });
-      console.log('✅ GeminiService: enhancePrompt response received:', text.substring(0, 120) + (text.length > 120 ? '…' : ''));
+      console.log('  GeminiService: enhancePrompt response received:', text.substring(0, 120) + (text.length > 120 ? '…' : ''));
       const result = text.trim();
       
       if (!result || result.length === 0) {
-        console.warn('⚠️ GeminiService: Empty response from AI model');
+        console.warn('   GeminiService: Empty response from AI model');
         throw new Error('Empty AI response');
       }
 
@@ -417,14 +417,14 @@ OUTPUT: Enhanced prompt only.`;
 
       // Reject if obvious code tokens slipped through
       if (/(\bclass\b|\bfunction\b|\bdef\b|\bimport\b|=>|console\.log\(|System\.out|#include|<script>|public\s+static|using\s+[A-Z]|;\s*$)/.test(sanitized) || /(const |let |var |private |protected |async )/.test(sanitized)) {
-        console.warn('⚠️ GeminiService: Detected code-like content in enhanced prompt, rejecting.');
+        console.warn('   GeminiService: Detected code-like content in enhanced prompt, rejecting.');
         throw new Error('AI produced code instead of a pure enhanced prompt');
       }
       
       return collapsed;
       
     } catch (error) {
-      console.error('❌ GeminiService: enhancePrompt failed:', error);
+      console.error('    GeminiService: enhancePrompt failed:', error);
       throw error;
     }
   }

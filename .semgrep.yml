@@ -2,23 +2,36 @@ rules:
   - id: hardcoded-secret
     patterns:
       - pattern-either:
+          # API keys and tokens (cross-language)
           - pattern: |
               $VAR = "sk-$X"
           - pattern: |
               $VAR = "pk_$X"
           - pattern: |
               $VAR = "Bearer $X"
+          # JavaScript/TypeScript
           - pattern: |
               const $VAR = "$SECRET"
           - pattern: |
               let $VAR = "$SECRET"
           - pattern: |
               var $VAR = "$SECRET"
+          # Python
+          - pattern: |
+              $VAR = "$SECRET"
+          - pattern: |
+              SECRET_KEY = "$SECRET"
+          - pattern: |
+              API_KEY = "$SECRET"
+          - pattern: |
+              TOKEN = "$SECRET"
+          - pattern: |
+              PASSWORD = "$SECRET"
       - metavariable-regex:
           metavariable: $SECRET
-          regex: .{20,}
+          regex: .{16,}
     message: "Hardcoded secret detected. Use environment variables instead."
-    languages: [javascript, typescript]
+    languages: [javascript, typescript, python]
     severity: ERROR
     metadata:
       category: security
@@ -51,8 +64,19 @@ rules:
               $QUERY = `SELECT * FROM $TABLE WHERE $COLUMN = ${$VAR}`
           - pattern: |
               $DB.query("SELECT * FROM $TABLE WHERE $COLUMN = " + $VAR)
+          # Python SQL injection patterns
+          - pattern: |
+              cursor.execute("SELECT * FROM $TABLE WHERE $COLUMN = " + $VAR)
+          - pattern: |
+              cursor.execute("INSERT INTO $TABLE VALUES (" + $VAR + ")")
+          - pattern: |
+              cursor.execute("DELETE FROM $TABLE WHERE $COLUMN = " + $VAR)
+          - pattern: |
+              query = "SELECT * FROM $TABLE WHERE $COLUMN = " + $VAR
+          - pattern: |
+              sql = "SELECT * FROM $TABLE WHERE $COLUMN = " + $VAR
     message: "SQL injection vulnerability. Use parameterized queries instead."
-    languages: [javascript, typescript]
+    languages: [javascript, typescript, python]
     severity: ERROR
     metadata:
       category: security
@@ -61,10 +85,16 @@ rules:
   - id: insecure-random
     patterns:
       - pattern-either:
+          # JavaScript/TypeScript
           - pattern: Math.random()
           - pattern: Math.random().toString($X)
-    message: "Cryptographically insecure random number generation. Use crypto.randomBytes() instead."
-    languages: [javascript, typescript]
+          # Python insecure random
+          - pattern: random.random()
+          - pattern: random.randint($A, $B)
+          - pattern: random.randrange($A)
+          - pattern: random.choice($A)
+    message: "Cryptographically insecure random number generation. Use crypto.randomBytes() (JS) or secrets module (Python) instead."
+    languages: [javascript, typescript, python]
     severity: WARNING
     metadata:
       category: security
@@ -222,8 +252,116 @@ rules:
           metavariable: $KEY
           regex: .{16,}
     message: "Additional hardcoded credentials detected. Use environment variables or secure credential storage."
-    languages: [javascript, typescript, json, yaml]
+    languages: [javascript, typescript, json, yaml, python]
     severity: ERROR
     metadata:
       category: security
       cwe: "CWE-798: Use of Hard-coded Credentials"
+
+  # Python-specific security rules
+  - id: python-eval-injection
+    patterns:
+      - pattern-either:
+          - pattern: eval($VAR)
+          - pattern: exec($VAR)
+          - pattern: compile($VAR, $X, $Y)
+    message: "Code injection vulnerability. Avoid eval(), exec(), and compile() with user input."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-94: Code Injection"
+
+  - id: python-pickle-deserialization
+    patterns:
+      - pattern-either:
+          - pattern: pickle.loads($VAR)
+          - pattern: pickle.load($VAR)
+          - pattern: cPickle.loads($VAR)
+          - pattern: cPickle.load($VAR)
+    message: "Unsafe deserialization with pickle. Use safer alternatives like json for untrusted data."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+
+  - id: python-shell-injection
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.call($VAR, shell=True)
+          - pattern: subprocess.run($VAR, shell=True)
+          - pattern: subprocess.Popen($VAR, shell=True)
+          - pattern: os.system($VAR)
+          - pattern: os.popen($VAR)
+    message: "Command injection vulnerability. Avoid shell=True and os.system() with user input."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-78: OS Command Injection"
+
+  - id: python-path-traversal
+    patterns:
+      - pattern-either:
+          - pattern: open($VAR, $MODE)
+          - pattern: open($VAR)
+          - pattern: file($VAR, $MODE)
+          - pattern: file($VAR)
+      - pattern-not: open("...", $MODE)
+      - pattern-not: open("...")
+    message: "Potential path traversal vulnerability. Validate and sanitize file paths."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-22: Path Traversal"
+
+  - id: python-weak-hash
+    patterns:
+      - pattern-either:
+          - pattern: hashlib.md5($X)
+          - pattern: hashlib.sha1($X)
+          - pattern: md5.new($X)
+          - pattern: sha.new($X)
+    message: "Weak cryptographic hash function. Use SHA-256 or stronger."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+
+  - id: python-assert-for-security
+    patterns:
+      - pattern: assert $CONDITION
+    message: "Avoid using assert for security checks. Use proper conditionals as asserts can be disabled."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-617: Reachable Assertion"
+
+  - id: python-flask-debug
+    patterns:
+      - pattern-either:
+          - pattern: app.run(debug=True)
+          - pattern: app.run(..., debug=True, ...)
+          - pattern: Flask(..., debug=True)
+    message: "Debug mode enabled in production. Set debug=False for production deployments."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-489: Active Debug Code"
+
+  - id: python-tempfile-insecure
+    patterns:
+      - pattern-either:
+          - pattern: tempfile.mktemp($X)
+          - pattern: tempfile.mktemp()
+    message: "Insecure temporary file creation. Use tempfile.mkstemp() instead."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-377: Insecure Temporary File"
