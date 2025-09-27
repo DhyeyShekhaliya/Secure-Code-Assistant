@@ -5,7 +5,7 @@ const API_KEY = "sk-1234567890abcdef1234567890abcdef";
 
 // SQL injection vulnerability (should be flagged)
 function getUserData(userId) {
-    const query = "SELECT * FROM users WHERE id = " + userId;
+    const query = "SELECT * FROM users WHERE id = ?";
     return database.query(query);
 }
 

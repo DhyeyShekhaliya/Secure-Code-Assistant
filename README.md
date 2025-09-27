@@ -1,104 +1,112 @@
-# secure# 🔐 Secure Code Assistant
+# 🔐 Secure Code Assistant
 
-A VS Code extension that provides multi-agent AI-powered security analysis and code fixes using Semgrep static analysis and Google Gemini AI.
+An opinionated VS Code extension providing real‑time static security scanning (Semgrep) plus AI‑assisted (Gemini) explanations, reporting, and security‑aware prompt enhancement (prompt only – no code generation). Built for fast feedback, minimal noise, and secure-by-default developer workflows.
 
 ## Features
 
-### 🔍 Real-time Security Analysis
-- **Automatic scanning** on file save using Semgrep static analysis
-- **Instant feedback** with security issues highlighted in your code
-- **Severity classification** (High, Medium, Low) with color-coded diagnostics
+### 🔍 Real‑Time Static Analysis (Semgrep)
+- Automatic scan on save (configurable)
+- Inline diagnostics with severity coloring (High / Medium / Low)
+- Custom ruleset focused on:
+  - Hardcoded secrets & credentials
+  - SQL injection string‑concat patterns
+  - Insecure randomness (Math.random)
+  - DOM XSS sinks (innerHTML / document.write)
+  - Missing auth patterns in Express style routes
+  - Vulnerable dependency versions (express / lodash / deprecated libs) in package manifests (JSON)
+  - Additional credential patterns in JSON/YAML config
 
-### 🤖 AI-Powered Explanations
-- **Detailed explanations** of security issues using Google Gemini AI
-- **Hover tooltips** with context-aware security advice
-- **CWE mapping** for standardized vulnerability classification
+### 🤖 AI-Powered Explanations (Gemini)
+- On-hover enriched security reasoning (severity normalization + CWE if available)
+- Robust JSON parsing with fallback heuristic explanations (never leaves you with “AI unavailable” silently)
+- Caches explanations per issue signature to reduce API calls
 
-### ⚡ One-Click Security Fixes
-- **Quick fix suggestions** for common security issues
-- **Automatic code replacement** for hardcoded secrets, SQL injection patterns, and more
-- **Immediate re-scanning** after fixes are applied
+### ⚡ One‑Click (Selective) Fixes
+- Quick Fix entries for supported detectable patterns (e.g., obvious secret literals)
+- Metrics captured for applied fixes (success/failure)
+- Triggers re-scan to validate remediation
 
-### 📝 Enhanced Prompt Generation
-- **Security-aware prompt enhancement** using predetermined security checklists
-- **OWASP-based recommendations** integrated into your development workflow
-- **Context-aware suggestions** for secure coding practices
+### 📝 Security Prompt Enhancement (Prompt‑Only Mode)
+- Enhances your natural language prompt with targeted security requirements
+- Strictly returns a single enhanced prompt 
+- Guardrails strip accidental code fences / code tokens
+- Fallback deterministic template if AI unavailable
 
 ### 📊 Security Reporting
-- **Comprehensive security reports** in Markdown format
-- **Auto-triage functionality** with issue prioritization
-- **Executive summaries** with actionable recommendations
+- AI-enriched Markdown report (if API key configured) or deterministic fallback report
+- Summaries + grouped issues + remediation recommendations
+- Generated as `SECURITY_REPORT.md` in workspace
 
 ## Requirements
 
-### Prerequisites
-1. **Semgrep**: Install the static analysis tool
-   ```bash
-   pip3 install semgrep
-   ```
+### External Tools
+| Component | Purpose | Install |
+|----------|---------|---------|
+| Semgrep  | Static security rules engine | `pip install semgrep` |
+| Google Gemini API Key (optional) | AI explanations & prompt enhancement | https://aistudio.google.com/app/apikey |
 
-2. **Google Gemini API Key**: Get your API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+### Runtime
+- VS Code ≥ 1.104.0
+- Node.js (build/extension host)
+- Python 3.x (Semgrep CLI)
 
-### System Requirements
-- VS Code 1.104.0 or higher
-- Node.js (for extension development)
-- Python 3.x (for Semgrep)
-
-## Installation
-
-1. Clone this repository
-2. Install dependencies: `npm install`
-3. Compile the extension: `npm run compile`
-4. Press `F5` to launch the extension in a new VS Code window
+## Installation (Developer)
+```bash
+git clone <your-fork-or-repo>
+cd secure-code-assistant
+npm install
+npm run compile
+```
+Launch the extension: Press F5 (Extension Development Host).
 
 ## Configuration
 
 Configure the extension through VS Code settings:
 
 ### Extension Settings
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `secureAssistant.enableReviewer` | Master on/off for scanning + diagnostics | `true` |
+| `secureAssistant.autoApplyFix` | Auto apply quick fixes (`never` \| `prompt` \| `auto`) | `prompt` |
+| `secureAssistant.scanOnSave` | Run Semgrep automatically on save | `true` |
+| `secureAssistant.severityThreshold` | Minimum severity to surface (`Low`/`Medium`/`High`) | `Medium` |
+| `secureAssistant.geminiApiKey` | Gemini API key (enables AI features) | *(unset)* |
 
-* `secureAssistant.enableReviewer`: Enable/disable automatic security code review (default: `true`)
-* `secureAssistant.autoApplyFix`: Auto-apply security fixes policy
-  - `never`: Never auto-apply fixes
-  - `prompt`: Ask before applying fixes (default)
-  - `auto`: Automatically apply fixes
-* `secureAssistant.scanOnSave`: Run security scan when files are saved (default: `true`)
-* `secureAssistant.severityThreshold`: Minimum severity threshold for showing issues
-  - `Low`: Show all issues
-  - `Medium`: Show medium and high severity issues (default)
-  - `High`: Show only high severity issues
-* `secureAssistant.geminiApiKey`: Your Google Gemini API key for AI-powered explanations
-
-### Setting up Gemini API Key
-
-1. Get your API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Open VS Code Settings (`Cmd/Ctrl + ,`)
-3. Search for "Secure Assistant"
-4. Enter your API key in the "Gemini Api Key" field
+### Configure Gemini API Key
+1. Get a key at https://aistudio.google.com/app/apikey  
+2. Command Palette → “Secure Code Assistant: Configure Gemini API Key”  
+3. (Alt) Add to settings.json:  
+   ```json
+   {
+     "secureAssistant.geminiApiKey": "Yourkey..."
+   }
+   ```
+4. Or create a `.env` file with `GOOGLE_GENERATIVE_AI_API_KEY=YOUR_KEY`
 
 ## Commands
 
 Access these commands via the Command Palette (`Cmd/Ctrl + Shift + P`):
 
-- **Enhance Prompt (SecureAssistant)**: Enhance your development prompts with security requirements
-- **Generate Security Report**: Create a comprehensive security report for your workspace
-- **Toggle Security Reviewer**: Enable/disable the security reviewer
+- Enhance Prompt (SecureAssistant): Add security hardening to a natural language prompt (returns prompt only)
+- Generate Security Report: Produce Markdown summary (AI-enhanced if available)
+- Toggle Security Reviewer: Enable/disable scanning + diagnostics
+- Show Metrics: View aggregated scan/fix metrics
+- Configure Gemini API Key / Reload AI Config
 
 ## Usage
 
 ### Basic Workflow
-
-1. **Open a code file** - The extension automatically activates
-2. **Save your file** - Semgrep analysis runs automatically
-3. **Review security issues** - Issues appear in the Problems panel and are highlighted in your code
-4. **Get explanations** - Hover over highlighted issues for AI-powered explanations
-5. **Apply quick fixes** - Click the lightbulb icon or use `Cmd/Ctrl + .` for quick fixes
-6. **Generate reports** - Use the command palette to create security reports
+1. Open a supported source file (JS/TS, JSON manifests, YAML secrets)  
+2. Save → automatic Semgrep scan  
+3. Hover a diagnostic → AI (or heuristic) explanation + suggested fix context  
+4. Apply quick fix where offered  
+5. Use “Enhance Prompt” for secure AI prompt refinement  
+6. Generate security report for audit / sharing  
 
 ### Advanced Features
 
 #### Prompt Enhancement
-Use the "Enhance Prompt" command to automatically add security considerations to your development prompts before using other AI coding assistants.
+Produces a single security-enriched prompt. No code output (guardrails reject code‑like tokens). If AI unavailable, a deterministic fallback template is displayed.
 
 #### Custom Security Reports
 Generate detailed reports that include:
@@ -107,14 +115,15 @@ Generate detailed reports that include:
 - Specific remediation steps
 - CWE mappings for compliance
 
-## Architecture
-
-The extension follows a multi-agent architecture:
-
-- **Coordinator**: Central state management and status tracking
-- **Code Reviewer Agent**: Semgrep integration and diagnostics management
-- **Prompt Enrichment Agent**: AI-powered prompt enhancement with security checklists
-- **Documenter Agent**: Report generation and auto-triage functionality
+## Architecture Overview
+| Component | Responsibility |
+|-----------|----------------|
+| Coordinator | State + issue registry + events |
+| SemgrepRunner | Executes Semgrep with bundled rules |
+| DiagnosticsManager | Applies/removes VS Code diagnostics |
+| CodeActionsProvider | Supplies quick fixes + telemetry hooks |
+| GeminiService | AI prompt enhancement + explanations + reporting (with guardrails) |
+| MetricsManager | Aggregates scan/fix stats (frequency, success) |
 
 ## Security Checklist
 
@@ -131,33 +140,21 @@ The extension uses a predetermined security checklist based on OWASP guidelines:
 9. Logging & auditability (avoid logging secrets)
 10. Safe deserialization practices
 
-## Known Issues
-
-- **Semgrep Installation**: The extension requires Semgrep to be installed separately
-- **API Rate Limits**: Google Gemini API has usage limits that may affect AI explanations
-- **Large Files**: Analysis may be slower on very large files
+## Limitations / Known Issues
+- Semgrep must be installed separately (no auto-install)
+- Current ruleset targets JavaScript/TypeScript + JSON/YAML (Python patterns not yet merged in active config)
+- AI explanations depend on external API availability & rate limits
+- Large monolithic files may scan slower
+- Some dynamic SQL / auth logic may evade pattern-based detection
 
 ## Development
-
-### Building from Source
-
 ```bash
-# Clone the repository
-git clone https://github.com/your-repo/secure-code-assistant.git
+git clone <repo>
 cd secure-code-assistant
-
-# Install dependencies
 npm install
-
-# Compile TypeScript
 npm run compile
-
-# Run tests
-npm test
-
-# Package the extension
-npx vsce package
 ```
+Launch debug host (F5). Package with: `npx vsce package`.
 
 ### Contributing
 
@@ -170,85 +167,13 @@ npx vsce package
 ## Release Notes
 
 ### 0.0.1
-
-- Initial release of Secure Code Assistant
-- Multi-agent architecture with Semgrep and Gemini AI integration
-- Real-time security analysis and quick fixes
-- AI-powered explanations and prompt enhancement
-- Comprehensive security reporting
-
----
-
-**Stay Secure! 🔐**
-
-For support and feature requests, please visit our [GitHub repository](https://github.com/your-repo/secure-code-assistant).-assistant README
-
-This is the README for your extension "secure-code-assistant". After writing up a brief description, we recommend including the following sections.
-
-## Features
-
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+- Initial foundation: Semgrep scanning, diagnostics, quick fixes
+- Gemini integration for explanations + prompt enhancement
+- Guardrailed prompt-only enhancement (no code generation)
+- AI + fallback security report generation
+- Metrics collection for scans & fixes
 
 ---
 
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+**Stay Secure!** 🔐  
+Open issues / feedback welcome via the repository.

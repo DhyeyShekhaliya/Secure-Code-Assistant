@@ -445,28 +445,149 @@ OUTPUT: Enhanced prompt only.`;
           cwe: issue.cwe
         }))
       }));
+      const jsonPrompt = `You are a security analyst. Summarize the following static analysis findings into a JSON object ONLY (no markdown) with this exact shape:
+{
+  "executiveSummary": "1-3 sentence risk overview",
+  "statistics": {
+    "total": number,
+    "high": number,
+    "medium": number,
+    "low": number,
+    "filesAffected": number
+  },
+  "groups": {
+    "high": [ { "ruleId": string, "file": string, "line": number, "message": string, "cwe": string|null, "remediation": string } ],
+    "medium": [ { "ruleId": string, "count": number, "sampleFiles": [string] } ],
+    "low": [ { "ruleId": string, "count": number } ]
+  },
+  "topRisks": [ { "ruleId": string, "why": string } ],
+  "priorityRemediations": [ { "action": string, "benefit": string } ],
+  "recommendedNextSteps": [ string ]
+}
 
-      const prompt = `Generate a comprehensive security report in Markdown format with the following sections:
-1. Executive Summary
-2. Issue Statistics
-3. High Priority Issues (with file, line, and remediation)
-4. Medium Priority Issues (grouped by type)
-5. Low Priority Issues (summary)
-6. Recommendations
+Rules for transformation:
+- For HIGH: list each finding separately with a direct remediation (imperative form)
+- For MEDIUM: group by ruleId, include count and up to 3 file samples
+- For LOW: group by ruleId with counts only
+- Derive 2-4 topRisks focusing on exploitation impact
+- Provide 3-6 prioritized remediation actions with clear benefit
+- recommendedNextSteps should be short imperative bullet phrases
 
-Security Issues Data:
+Input Findings JSON:
 ${JSON.stringify(issuesData, null, 2)}
 
-Make the report professional and actionable for developers.`;
+Return ONLY JSON.`;
 
       const { text } = await generateText({
         model: this.model,
-        system: "You are a technical security writer. Create clear, actionable security reports.",
-        prompt,
-        temperature: 0.2
+        system: "You output strictly JSON for security summarization; no code, no markdown.",
+        prompt: jsonPrompt,
+        temperature: 0.1
       });
 
-      return text;
+      let raw = text.trim().replace(/```[a-zA-Z]*\n?/g, '').replace(/```/g, '').trim();
+      if (!raw.startsWith('{')) {
+        const m = raw.match(/\{[\s\S]*\}/);
+        if (m) {
+          raw = m[0];
+        }
+      }
+      interface ReportJSON { executiveSummary:string; statistics:any; groups:any; topRisks:any[]; priorityRemediations:any[]; recommendedNextSteps:string[]; }
+      let parsed: ReportJSON | null = null;
+      try { parsed = JSON.parse(raw); } catch {
+        // Fallback to basic report if parsing fails
+        return this.generateBasicReport(allIssues);
+      }
+
+      if (!parsed) {
+        return this.generateBasicReport(allIssues);
+      }
+
+      const md: string[] = [];
+      md.push('# Security Analysis Report');
+      md.push('');
+      md.push('## Executive Summary');
+    md.push(parsed.executiveSummary || 'Summary unavailable.');
+      md.push('');
+      md.push('## Issue Statistics');
+      md.push(`- Total: ${parsed.statistics?.total}`);
+      md.push(`- High: ${parsed.statistics?.high}`);
+      md.push(`- Medium: ${parsed.statistics?.medium}`);
+      md.push(`- Low: ${parsed.statistics?.low}`);
+      md.push(`- Files Affected: ${parsed.statistics?.filesAffected}`);
+      md.push('');
+
+      // High severity section
+      md.push('## High Severity Findings');
+      if (parsed.groups?.high?.length) {
+        for (const h of parsed.groups.high) {
+          md.push(`- **${h.ruleId}** (${h.file}:${h.line}) - ${h.message}${h.cwe ? ` (CWE: ${h.cwe})` : ''}`);
+          if (h.remediation) {
+            md.push(`  - Remediation: ${h.remediation}`);
+          }
+        }
+      } else {
+        md.push('_None_');
+      }
+      md.push('');
+
+      // Medium grouped
+      md.push('## Medium Severity (Grouped)');
+      if (parsed.groups?.medium?.length) {
+        for (const m of parsed.groups.medium) {
+          md.push(`- **${m.ruleId}**: ${m.count} occurrence(s)${m.sampleFiles?.length ? ` (e.g., ${m.sampleFiles.join(', ')})` : ''}`);
+        }
+      } else {
+        md.push('_None_');
+      }
+      md.push('');
+
+      // Low grouped
+      md.push('## Low Severity (Summary)');
+      if (parsed.groups?.low?.length) {
+        for (const l of parsed.groups.low) {
+          md.push(`- **${l.ruleId}**: ${l.count}`);
+        }
+      } else {
+        md.push('_None_');
+      }
+      md.push('');
+
+      // Top Risks
+      md.push('## Top Risks');
+      if (parsed.topRisks?.length) {
+        for (const r of parsed.topRisks) {
+          md.push(`- **${r.ruleId}**: ${r.why}`);
+        }
+      } else {
+        md.push('_None_');
+      }
+      md.push('');
+
+      // Priority Remediations
+      md.push('## Priority Remediations');
+      if (parsed.priorityRemediations?.length) {
+        for (const pr of parsed.priorityRemediations) {
+          md.push(`- **${pr.action}** — ${pr.benefit}`);
+        }
+      } else {
+        md.push('_None_');
+      }
+      md.push('');
+
+      // Next Steps
+      md.push('## Recommended Next Steps');
+      if (parsed.recommendedNextSteps?.length) {
+        for (const s of parsed.recommendedNextSteps) {
+          md.push(`- ${s}`);
+        }
+      } else {
+        md.push('_None_');
+      }
+      md.push('');
+      md.push(`_Generated: ${new Date().toISOString()} (AI-assisted)_`);
+
+      return md.join('\n');
     } catch (error) {
       console.error('Failed to generate AI report:', error);
       return this.generateBasicReport(allIssues);
